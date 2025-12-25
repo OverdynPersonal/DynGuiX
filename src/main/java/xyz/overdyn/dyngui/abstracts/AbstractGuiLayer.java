@@ -131,6 +131,25 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
     }
 
     /**
+     * Returns the list of all GUI items currently registered in this layer.
+     *
+     * <p>The returned collection represents the internal state of the GUI layer
+     * and contains all {@link GuiItem} instances that are currently bound to
+     * one or more inventory slots.</p>
+     *
+     * <p><b>Important:</b> the returned list is backed by the internal storage.
+     * Modifying it directly may lead to inconsistent GUI state. External code
+     * should treat this list as read-only unless explicitly managing the GUI
+     * lifecycle.</p>
+     *
+     * @return the list of registered {@link GuiItem}s for this GUI layer
+     */
+    public List<GuiItem> getItems() {
+        return items;
+    }
+
+
+    /**
      * Registers a GUI item using hard replacement strategy.
      *
      * <p>If any existing {@link GuiItem} occupies one or more of the same slots,
