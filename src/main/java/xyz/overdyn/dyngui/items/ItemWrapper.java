@@ -1,10 +1,8 @@
 package xyz.overdyn.dyngui.items;
 
 import com.google.common.base.Preconditions;
-import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -12,7 +10,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.overdyn.dyngui.placeholder.Placeholder;
-import xyz.overdyn.dyngui.placeholder.context.PlaceholderContextImpl;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,7 +49,7 @@ public class ItemWrapper implements Cloneable {
 
     /**
      * Display name of the item represented as a {@link Component}. This value
-     * can be pre-processed or dynamically modified using a {@link Placeholder}
+     * can be pre-processed or dynamically modified using a {@link xyz.overdyn.dyngui.placeholder.Placeholder}
      * when the update logic is executed.
      * <p>
      * The stored value is considered the base form, while any placeholder
@@ -100,16 +97,6 @@ public class ItemWrapper implements Cloneable {
      * and whatever flags the item had originally will remain unchanged.
      */
     private List<ItemFlag> flags;
-
-    /**
-     * Cached {@link ItemMeta} instance for this item, used to avoid repeated
-     * calls to {@link ItemStack#getItemMeta()} and {@link ItemStack#setItemMeta(ItemMeta)}.
-     * Reducing meta lookups can improve performance in large or dynamic GUIs.
-     * <p>
-     * This cache is lazily initialized and cleared whenever the underlying
-     * {@link ItemStack} reference is replaced.
-     */
-    private ItemMeta cachedMeta;
 
     /**
      * Creates a new wrapper around the specified {@link ItemStack} and serializer.
@@ -165,7 +152,6 @@ public class ItemWrapper implements Cloneable {
      * values into their corresponding {@link Component} forms.
      *
      * @param material   the base material for the item
-     * @param serializer serializer to use for text parsing, or {@code null}
      * @return a new builder bound to the given material and serializer
      */
     public static Builder builder(@NotNull Material material) {
@@ -195,49 +181,12 @@ public class ItemWrapper implements Cloneable {
      * This is the core method that should be invoked once all desired changes
      * have been made, especially when auto-flush mode is disabled.
      *
-     * @param player optional player used for placeholder evaluation, may be null
      */
     public void update() {
-        if (cachedMeta == null) cachedMeta = itemStack.getItemMeta();
-        if (cachedMeta == null) return;
+        var cachedMeta = itemStack.getItemMeta();
 
         cachedMeta.displayName(displayName);
         cachedMeta.lore(displayLore);
-        cachedMeta.setCustomModelData(customModelData);
-
-        if (enchanted) {
-            cachedMeta.addEnchant(Enchantment.LURE, 1, true);
-        } else {
-            cachedMeta.removeEnchant(Enchantment.LURE);
-        }
-
-        if (flags != null) {
-            if (!cachedMeta.getItemFlags().isEmpty()) {
-                for (ItemFlag f : cachedMeta.getItemFlags()) {
-                    cachedMeta.removeItemFlags(f);
-                }
-            }
-            cachedMeta.addItemFlags(flags.toArray(new ItemFlag[0]));
-        }
-
-        itemStack.setType(material);
-        itemStack.setItemMeta(cachedMeta);
-    }
-
-    public void update(@Nullable OfflinePlayer player, Placeholder placeholderEngine, PlaceholderContextImpl context) {
-        if (cachedMeta == null) cachedMeta = itemStack.getItemMeta();
-        if (cachedMeta == null) return;
-
-        Component tempName = displayName;
-        List<Component> tempLore = displayLore != null ? new ArrayList<>(displayLore) : null;
-
-        if (placeholderEngine != null) {
-            if (tempName != null) tempName = placeholderEngine.process(tempName, context);
-            if (tempLore != null) tempLore = placeholderEngine.process(tempLore, context);
-        }
-
-        cachedMeta.displayName(tempName);
-        cachedMeta.lore(tempLore);
         cachedMeta.setCustomModelData(customModelData);
 
         if (enchanted) {
@@ -304,7 +253,6 @@ public class ItemWrapper implements Cloneable {
         Preconditions.checkArgument(itemStack != null, "ItemStack cannot be null");
         this.itemStack = itemStack;
         this.material = itemStack.getType();
-        this.cachedMeta = null;
         update();
     }
 
@@ -540,7 +488,6 @@ public class ItemWrapper implements Cloneable {
         try {
             ItemWrapper clone = (ItemWrapper) super.clone();
             clone.itemStack = this.itemStack.clone();
-            clone.cachedMeta = null;
             clone.displayName = this.displayName;
             clone.material = this.material;
             clone.customModelData = this.customModelData;

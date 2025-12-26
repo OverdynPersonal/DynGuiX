@@ -16,103 +16,116 @@ public class TaskSchedulerImpl implements TaskScheduler {
 
     private final JavaPlugin PLUGIN;
     private final BukkitScheduler SCHEDULER = Bukkit.getScheduler();
-
     private final Set<BukkitTask> tasks = Collections.synchronizedSet(new HashSet<>());
 
     public TaskSchedulerImpl(DynGui dynGui) {
         this.PLUGIN = dynGui.getPlugin();
+
+        SCHEDULER.runTaskTimer(PLUGIN, this::cleanup, 100L, 100L);
     }
 
     private void register(BukkitTask task) {
         if (task != null) tasks.add(task);
     }
 
+    private BukkitTask trackTask(@NotNull Runnable task, long delay, long period, boolean store) {
+        if (period > 0) {
+            BukkitTask t = SCHEDULER.runTaskTimer(PLUGIN, task, delay, period);
+            if (store) register(t);
+            return t;
+        } else if (delay > 0) {
+            BukkitTask t = SCHEDULER.runTaskLater(PLUGIN, task, delay);
+            if (store) register(t);
+            return t;
+        } else {
+            // Одноразовая задача без delay
+            return SCHEDULER.runTask(PLUGIN, task);
+        }
+    }
+
+    private BukkitTask trackTaskAsync(@NotNull Runnable task, long delay, long period, boolean store) {
+        if (period > 0) {
+            BukkitTask t = SCHEDULER.runTaskTimerAsynchronously(PLUGIN, task, delay, period);
+            if (store) register(t);
+            return t;
+        } else if (delay > 0) {
+            BukkitTask t = SCHEDULER.runTaskLaterAsynchronously(PLUGIN, task, delay);
+            if (store) register(t);
+            return t;
+        } else {
+            return SCHEDULER.runTaskAsynchronously(PLUGIN, task);
+        }
+    }
+
     @Override
     public @NotNull BukkitTask runTask(@NotNull Runnable task) {
-        BukkitTask t = SCHEDULER.runTask(PLUGIN, task);
-        register(t);
-        return t;
+        return trackTask(task, 0L, 0L, false);
     }
 
     @Override
     public @NotNull BukkitTask runTaskAsync(@NotNull Runnable task) {
-        BukkitTask t = SCHEDULER.runTaskAsynchronously(PLUGIN, task);
-        register(t);
-        return t;
+        return trackTaskAsync(task, 0L, 0L, false);
+    }
+
+    @Override
+    public @NotNull BukkitTask runTask(@NotNull Runnable task, long delay) {
+        return trackTask(task, delay, 0L, true);
+    }
+
+    @Override
+    public @NotNull BukkitTask runTaskAsync(@NotNull Runnable task, long delay) {
+        return trackTaskAsync(task, delay, 0L, true);
+    }
+
+    @Override
+    public @NotNull BukkitTask runTask(@NotNull Runnable task, long delay, long period) {
+        return trackTask(task, delay, period, true);
+    }
+
+    @Override
+    public @NotNull BukkitTask runTaskAsync(@NotNull Runnable task, long delay, long period) {
+        return trackTaskAsync(task, delay, period, true);
     }
 
     @Override
     public void runTask(@NotNull Consumer<BukkitTask> action) {
-        BukkitTask t = SCHEDULER.runTask(PLUGIN, () -> {});
-        register(t);
+        BukkitTask t = runTask(() -> {});
         action.accept(t);
     }
 
     @Override
     public void runTaskAsync(@NotNull Consumer<BukkitTask> action) {
-        BukkitTask t = SCHEDULER.runTaskAsynchronously(PLUGIN, () -> {});
-        register(t);
+        BukkitTask t = runTaskAsync(() -> {});
         action.accept(t);
     }
 
     @Override
-    public @NotNull BukkitTask runTask(@NotNull Runnable task, long delay) {
-        BukkitTask t = SCHEDULER.runTaskLater(PLUGIN, task, delay);
-        register(t);
-        return t;
-    }
-
-    @Override
-    public @NotNull BukkitTask runTaskAsync(@NotNull Runnable task, long delay) {
-        BukkitTask t = SCHEDULER.runTaskLaterAsynchronously(PLUGIN, task, delay);
-        register(t);
-        return t;
-    }
-
-    @Override
     public void runTask(@NotNull Consumer<BukkitTask> action, long delay) {
-        BukkitTask t = SCHEDULER.runTaskLater(PLUGIN, () -> {}, delay);
-        register(t);
+        BukkitTask t = runTask(() -> {}, delay);
         action.accept(t);
     }
 
     @Override
     public void runTaskAsync(@NotNull Consumer<BukkitTask> action, long delay) {
-        BukkitTask t = SCHEDULER.runTaskLaterAsynchronously(PLUGIN, () -> {}, delay);
-        register(t);
+        BukkitTask t = runTaskAsync(() -> {}, delay);
         action.accept(t);
     }
 
     @Override
-    public @NotNull BukkitTask runTask(@NotNull Runnable task, long delay, long period) {
-        BukkitTask t = SCHEDULER.runTaskTimer(PLUGIN, task, delay, period);
-        register(t);
-        return t;
-    }
-
-    @Override
-    public @NotNull BukkitTask runTaskAsync(@NotNull Runnable task, long delay, long period) {
-        BukkitTask t = SCHEDULER.runTaskTimerAsynchronously(PLUGIN, task, delay, period);
-        register(t);
-        return t;
-    }
-
-    @Override
     public void runTask(@NotNull Consumer<BukkitTask> action, long delay, long period) {
-        BukkitTask t = SCHEDULER.runTaskTimer(PLUGIN, () -> {}, delay, period);
-        register(t);
+        BukkitTask t = runTask(() -> {}, delay, period);
         action.accept(t);
     }
 
     @Override
     public void runTaskAsync(@NotNull Consumer<BukkitTask> action, long delay, long period) {
-        BukkitTask t = SCHEDULER.runTaskTimerAsynchronously(PLUGIN, () -> {}, delay, period);
-        register(t);
+        BukkitTask t = runTaskAsync(() -> {}, delay, period);
         action.accept(t);
     }
 
     @Override
     public @NotNull Set<BukkitTask> getTasks() {
+        cleanup();
         return Collections.unmodifiableSet(tasks);
     }
 
