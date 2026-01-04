@@ -1,19 +1,26 @@
 package xyz.overdyn.dyngui.items;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 import com.google.common.base.Preconditions;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.overdyn.dyngui.placeholder.Placeholder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
@@ -27,6 +34,13 @@ import java.util.function.Consumer;
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
 public class ItemWrapper implements Cloneable {
+
+    /**
+     * Cache for PlayerProfile objects keyed by Base64 skin string.
+     * This prevents creating multiple profiles for the same skin,
+     * improving performance and reducing server load.
+     */
+    private static final Map<String, PlayerProfile> SKIN_CACHE = new ConcurrentHashMap<>();
 
     /**
      * Underlying {@link ItemStack} instance that is being wrapped and manipulated.
@@ -262,6 +276,59 @@ public class ItemWrapper implements Cloneable {
     @NotNull
     public ItemStack itemStack() {
         return itemStack;
+    }
+
+    /**
+     * Applies an RGB color to the item if it is a leather armor piece or a potion.
+     * The color is provided as three separate integer values for red, green, and blue.
+     *
+     * @param red   Red component (0-255)
+     * @param green Green component (0-255)
+     * @param blue  Blue component (0-255)
+     * @return this ItemWrapper for fluent chaining
+     */
+    public ItemWrapper applyColor(int red, int green, int blue) {
+        var meta = itemStack.getItemMeta();
+        if (meta == null) return this;
+
+        Color color = Color.fromRGB(red, green, blue);
+
+        if (meta instanceof LeatherArmorMeta leather) {
+            leather.setColor(color);
+            itemStack.setItemMeta(leather);
+        } else if (meta instanceof PotionMeta potion) {
+            potion.setColor(color);
+            itemStack.setItemMeta(potion);
+        }
+
+        return this;
+    }
+
+    /**
+     * Applies a custom player skin to the item if it is a player head.
+     * Uses PlayerProfile and ProfileProperty. Results are cached to improve performance.
+     *
+     * @param base64Skin Base64 encoded skin texture string
+     * @return this ItemWrapper for fluent chaining
+     */
+    public ItemWrapper applySkin(String base64Skin) {
+        if (base64Skin == null || base64Skin.isBlank()) return this;
+
+        var meta = itemStack.getItemMeta();
+        if (!(meta instanceof SkullMeta skullMeta)) return this;
+
+        var profile = SKIN_CACHE.computeIfAbsent(base64Skin, skin -> {
+            UUID uuid = UUID.nameUUIDFromBytes(skin.getBytes());
+            var newProfile = Bukkit.createProfile(uuid);
+
+            newProfile.setProperty(new ProfileProperty("textures", skin));
+            return newProfile;
+        });
+
+        skullMeta.setPlayerProfile(profile);
+        itemStack.setItemMeta(skullMeta);
+
+        return this;
     }
 
     /**

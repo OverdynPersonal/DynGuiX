@@ -5,6 +5,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemFlag;
@@ -104,14 +105,16 @@ public class InventoryUI implements PropertyContainer {
     }
 
     public interface Requirement {
-        boolean test();
+        boolean test(Player player);
     }
         public record SimpleRequirement(String type, String input, String output, String permission,
                                         List<String> success_commands,
                                         List<String> failure_commands) implements Requirement {
 
             @Override
-            public boolean test() {
+            public boolean test(Player player) {
+
+
                 return true;
             }
         }
@@ -147,7 +150,7 @@ public class InventoryUI implements PropertyContainer {
         }
 
         @Override
-        public boolean test() {
+        public boolean test(Player player) {
             return true;
         }
     }

@@ -74,10 +74,10 @@ public class GuiBuilder extends AbstractGuiLayer {
             InventoryUI.Button selected = null;
             for (InventoryUI.Button b : candidates) {
                 var requirements = b.meta(InventoryUI.Button.ButtonProperty.VIEW_REQUIREMENTS);
-                if (requirements == null || requirements.stream().allMatch(InventoryUI.Requirement::test)) {
-                    selected = b;
-                    break;
-                }
+//                if (requirements == null || requirements.stream().allMatch(InventoryUI.Requirement::test)) {
+//                    selected = b;
+//                    break;
+//                }
             }
 
             if (selected != null) {
