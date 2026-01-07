@@ -25,15 +25,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * High-level wrapper around a {@link ItemStack} that centralizes all display and
- * interaction logic for GUI items. It supports dynamic names, lore, placeholder
- * processing, custom model data, enchant glint, flags and click handlers.
- * <p>
- * This class is meant to be used in inventory-based menus where items must be
- * updated frequently and consistently. It offers both automatic and manual
- * update modes to balance performance and convenience.
+ * High-level wrapper around {@link ItemStack} for GUI items.
+ *
+ * <p><b>Deprecated:</b> This class is outdated and will be removed in future versions.
+ * Use {@link xyz.overdyn.dyngui.items.minecraft.meta.ItemData} instead. Any
+ * ItemWrapper will automatically adapt to ItemData when used.</p>
  */
-@SuppressWarnings({"unused", "UnusedReturnValue"}) @Deprecated
+@Deprecated(since = "1.0.2.3", forRemoval = true)
+@SuppressWarnings("removal")
 public class ItemWrapper implements Cloneable {
 
     /**

@@ -24,7 +24,7 @@ plugins {
 }
 
 group = "xyz.overdyn"
-version = "1.0.2.2"
+version = "1.0.2.3"
 
 java {
     toolchain {
