@@ -1,8 +1,8 @@
-package xyz.overdyn.dyngui.form.v2.cache;
+package xyz.overdyn.dyngui.cache;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import xyz.overdyn.dyngui.form.SkullCreator;
+import xyz.overdyn.dyngui.SkullCreator;
 import xyz.overdyn.dyngui.items.ItemWrapper;
 
 import java.util.HashMap;

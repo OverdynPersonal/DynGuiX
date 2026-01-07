@@ -17,6 +17,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import xyz.overdyn.dyngui.items.minecraft.meta.ItemData;
 import xyz.overdyn.dyngui.placeholder.Placeholder;
 
 import java.util.*;
@@ -32,7 +33,7 @@ import java.util.function.Consumer;
  * updated frequently and consistently. It offers both automatic and manual
  * update modes to balance performance and convenience.
  */
-@SuppressWarnings({"unused", "UnusedReturnValue"})
+@SuppressWarnings({"unused", "UnusedReturnValue"}) @Deprecated
 public class ItemWrapper implements Cloneable {
 
     /**
@@ -60,6 +61,19 @@ public class ItemWrapper implements Cloneable {
      * is particularly useful in GUI systems to visualize toggles or states.
      */
     private Material material;
+    private ItemData data;
+
+    public int getGreen() {
+        return green;
+    }
+
+    public int getRed() {
+        return red;
+    }
+
+    public int getBlue() {
+        return blue;
+    }
 
     /**
      * Display name of the item represented as a {@link Component}. This value
@@ -101,6 +115,23 @@ public class ItemWrapper implements Cloneable {
      * important buttons, or active states that require the player's attention.
      */
     private boolean enchanted;
+    private int red;
+    private int green;
+    private int blue;
+
+    public void setModernData(ItemData data) {
+        this.data = data;
+    }
+
+    public String getBase64Skin() {
+        return base64Skin;
+    }
+
+    private String base64Skin;
+
+    public List<EnchantmentEntry> getEnchantments() {
+        return enchantments;
+    }
 
     /**
      * Real enchantments applied to this item. These enchantments affect both
@@ -245,6 +276,32 @@ public class ItemWrapper implements Cloneable {
 
         itemStack.setType(material);
         itemStack.setItemMeta(cachedMeta);
+
+        data.setDisplayName(displayName);
+        data.setLore(displayLore);
+        data.setCustomModelData(customModelData);
+        data.removeEnchants();
+        if (enchantments != null) {
+            for (EnchantmentEntry entry : enchantments) {
+                data.addEnchant(
+                        entry.enchantment(),
+                        entry.level()
+                );
+            }
+        }
+        if (enchanted && (enchantments == null || enchantments.isEmpty())) {
+            data.addEnchant(Enchantment.LURE, 1);
+        }
+
+        if (flags != null) {
+            if (!data.getItemFlags().isEmpty()) {
+                for (ItemFlag f : data.getItemFlags()) {
+                    data.removeItemFlag(f);
+                }
+            }
+            data.addItemFlags(flags);
+            data.setMaterial(material);
+        }
     }
 
 
@@ -291,6 +348,10 @@ public class ItemWrapper implements Cloneable {
         var meta = itemStack.getItemMeta();
         if (meta == null) return this;
 
+        this.red = red;
+        this.green = green;
+        this.blue = blue;
+
         Color color = Color.fromRGB(red, green, blue);
 
         if (meta instanceof LeatherArmorMeta leather) {
@@ -313,6 +374,8 @@ public class ItemWrapper implements Cloneable {
      */
     public ItemWrapper applySkin(String base64Skin) {
         if (base64Skin == null || base64Skin.isBlank()) return this;
+
+        this.base64Skin = base64Skin;
 
         var meta = itemStack.getItemMeta();
         if (!(meta instanceof SkullMeta skullMeta)) return this;

@@ -2,15 +2,18 @@ package xyz.overdyn.dyngui.items;
 
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.overdyn.dyngui.dupe.ItemMarker;
+import xyz.overdyn.dyngui.items.minecraft.ItemMinecraft;
+import xyz.overdyn.dyngui.items.minecraft.meta.ItemData;
 import xyz.overdyn.dyngui.placeholder.Placeholder;
 import xyz.overdyn.dyngui.placeholder.context.PlaceholderContextImpl;
 
@@ -34,9 +37,8 @@ import java.util.function.Consumer;
 @SuppressWarnings({"unused", "UnusedReturnValue"})
 public final class GuiItem implements Cloneable {
 
-    private final ItemWrapper itemWrapper;
-
     private final Collection<Integer> slots = new ArrayList<>();
+    private final @NotNull ItemData data;
     private boolean marker;
     private boolean update;
     private String key;
@@ -46,9 +48,26 @@ public final class GuiItem implements Cloneable {
     private @Nullable Placeholder placeholderEngine;
     private @Nullable Consumer<InventoryClickEvent> clickHandler;
 
+    @Deprecated
     public GuiItem(@NotNull ItemWrapper item) {
         this.marker = true;
-        this.itemWrapper = Objects.requireNonNull(item, "item");
+        this.data = new ItemMinecraft(item.material(), item.itemStack().getAmount());
+        item.setModernData(data);
+        data.setDisplayName(item.displayName());
+        data.setLore(item.lore());
+        item.getEnchantments().forEach(enchantment -> data.addEnchant(enchantment.enchantment(), enchantment.level()));
+        data.setSkullTextureBase64(item.getBase64Skin());
+        data.setColor(Color.fromBGR(item.getRed(),  item.getGreen(), item.getBlue()));
+        if (item.enchanted()) data.addEnchant(Enchantment.LURE, 1);
+        for (ItemFlag itemFlag : item.flags()) {
+            data.addItemFlag(itemFlag);
+        }
+        data.setCustomModelData(item.customModelData());
+    }
+
+    public GuiItem(@NotNull ItemData data) {
+        this.marker = true;
+        this.data = data;
     }
 
     public GuiItem(@NotNull ItemStack baseStack) {
@@ -167,30 +186,35 @@ public final class GuiItem implements Cloneable {
     }
 
     public ItemStack baseItemStack() {
-        if (isMarker()) return ItemMarker.mark(itemWrapper.itemStack());
-        return itemWrapper.itemStack();
+        if (isMarker()) return ItemMarker.mark(data.buildItemStack());
+        return data.buildItemStack();
+    }
+
+    public ItemData getItemData() {
+        return data;
     }
 
     public ItemStack render(@Nullable OfflinePlayer player) {
-        itemWrapper.update();
-
-        PlaceholderContextImpl context = new PlaceholderContextImpl(player, metadataPlaceholder);
-
-        var cachedMeta = itemWrapper.itemStack().getItemMeta();
+        var cachedMeta = data.buildItemStack().getItemMeta();
         if (cachedMeta == null) return baseItemStack();
 
-        Component name = itemWrapper.displayName();
-        List<Component> lore = itemWrapper.lore() != null ? new ArrayList<>(itemWrapper.lore()) : null;
-
         if (placeholderEngine != null) {
-            if (name != null) name = placeholderEngine.process(name, context);
-            if (lore != null) lore = placeholderEngine.process(lore, context);
+            var context = new PlaceholderContextImpl(player, metadataPlaceholder);
+
+            Component name = data.getDisplayName();
+            List<Component> lore = data.getLore() != null ? new ArrayList<>(data.getLore()) : null;
+
+            if (name != null) {
+                name = placeholderEngine.process(name, context);
+                cachedMeta.displayName(name);
+            }
+            if (lore != null) {
+                lore = placeholderEngine.process(lore, context);
+                cachedMeta.lore(lore);
+            }
         }
 
-        if (name != null) cachedMeta.displayName(name);
-        if (lore != null) cachedMeta.lore(lore);
-
-        itemWrapper.itemStack().setItemMeta(cachedMeta);
+        data.buildItemStack().setItemMeta(cachedMeta);
 
         return baseItemStack();
     }
@@ -202,15 +226,23 @@ public final class GuiItem implements Cloneable {
         return render(player);
     }
 
-    /* ========= Сахар поверх ItemWrapper, если хочешь =================== */
-
     public GuiItem name(@Nullable Component name) {
-        this.itemWrapper.displayName(name);
+        this.data.setDisplayName(name);
         return this;
     }
 
     public GuiItem lore(@Nullable List<Component> lore) {
-        this.itemWrapper.lore(lore);
+        this.data.setLore(lore);
+        return this;
+    }
+
+    public GuiItem setName(@Nullable String name) {
+        this.data.setDisplayName(name);
+        return this;
+    }
+
+    public GuiItem setLore(@Nullable List<String> lore) {
+        this.data.setLoreStrings(lore);
         return this;
     }
 
@@ -218,7 +250,7 @@ public final class GuiItem implements Cloneable {
     public GuiItem clone() {
         try {
             GuiItem clone = (GuiItem) super.clone();
-            ItemWrapper clonedItem = this.itemWrapper.clone();
+            ItemData clonedItem = this.data.clone();
             return new GuiItem(clonedItem)
                     .placeholderEngine(this.placeholderEngine)
                     .onClick(this.clickHandler)
@@ -234,5 +266,4 @@ public final class GuiItem implements Cloneable {
         this.metadata.putAll(meta);
         return this;
     }
-
 }
