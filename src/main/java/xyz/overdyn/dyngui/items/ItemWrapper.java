@@ -31,7 +31,7 @@ import java.util.function.Consumer;
  * Use {@link xyz.overdyn.dyngui.items.minecraft.meta.ItemData} instead. Any
  * ItemWrapper will automatically adapt to ItemData when used.</p>
  */
-@Deprecated(since = "1.0.2.3", forRemoval = true)
+//@Deprecated(since = "1.0.2.3", forRemoval = true)
 @SuppressWarnings("removal")
 public class ItemWrapper implements Cloneable {
 
@@ -229,6 +229,7 @@ public class ItemWrapper implements Cloneable {
      */
     public void setAmount(int amount) {
         itemStack.setAmount(amount);
+        data.setAmount(amount);
     }
 
     /**

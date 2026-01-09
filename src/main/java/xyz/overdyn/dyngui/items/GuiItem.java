@@ -48,21 +48,9 @@ public final class GuiItem implements Cloneable {
     private @Nullable Placeholder placeholderEngine;
     private @Nullable Consumer<InventoryClickEvent> clickHandler;
 
-    @Deprecated
-    public GuiItem(@NotNull ItemWrapper item) {
-        this.marker = true;
-        this.data = new ItemMinecraft(item.material(), item.itemStack().getAmount());
-        item.setModernData(data);
-        data.setDisplayName(item.displayName());
-        data.setLore(item.lore());
-        item.getEnchantments().forEach(enchantment -> data.addEnchant(enchantment.enchantment(), enchantment.level()));
-        data.setSkullTextureBase64(item.getBase64Skin());
-        data.setColor(Color.fromBGR(item.getRed(),  item.getGreen(), item.getBlue()));
-        if (item.enchanted()) data.addEnchant(Enchantment.LURE, 1);
-        for (ItemFlag itemFlag : item.flags()) {
-            data.addItemFlag(itemFlag);
-        }
-        data.setCustomModelData(item.customModelData());
+    @Deprecated(since = "1.0.2.3", forRemoval = true)
+    public static GuiItem fromLegacy(@NotNull ItemWrapper item) {
+        return LegacyItemAdapter.convert(item);
     }
 
     public GuiItem(@NotNull ItemData data) {
@@ -71,15 +59,15 @@ public final class GuiItem implements Cloneable {
     }
 
     public GuiItem(@NotNull ItemStack baseStack) {
-        this(new ItemWrapper(baseStack));
+        this(new ItemMinecraft(baseStack));
     }
 
     public GuiItem(@NotNull Material material) {
-        this(new ItemWrapper(material));
+        this(new ItemMinecraft(material));
     }
 
     public GuiItem(@NotNull Material material, int amount) {
-        this(new ItemWrapper(material, amount));
+        this(new ItemMinecraft(material, amount));
     }
 
     public GuiItem setSlots(@NotNull Collection<Integer> slots) {
@@ -195,28 +183,37 @@ public final class GuiItem implements Cloneable {
     }
 
     public ItemStack render(@Nullable OfflinePlayer player) {
-        var cachedMeta = data.buildItemStack().getItemMeta();
-        if (cachedMeta == null) return baseItemStack();
+        try {
+            var cachedMeta = data.buildItemStack().getItemMeta();
+            if (cachedMeta == null) return baseItemStack();
 
-        if (placeholderEngine != null) {
-            var context = new PlaceholderContextImpl(player, metadataPlaceholder);
+            if (placeholderEngine != null) {
+                try {
+                    var context = new PlaceholderContextImpl(player, metadataPlaceholder);
 
-            Component name = data.getDisplayName();
-            List<Component> lore = data.getLore() != null ? new ArrayList<>(data.getLore()) : null;
+                    Component name = data.getDisplayName();
+                    List<Component> lore = data.getLore() != null ? new ArrayList<>(data.getLore()) : null;
 
-            if (name != null) {
-                name = placeholderEngine.process(name, context);
-                cachedMeta.displayName(name);
+                    if (name != null) {
+                        name = placeholderEngine.process(name, context);
+                        cachedMeta.displayName(name);
+                    }
+                    if (lore != null) {
+                        lore = placeholderEngine.process(lore, context);
+                        cachedMeta.lore(lore);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-            if (lore != null) {
-                lore = placeholderEngine.process(lore, context);
-                cachedMeta.lore(lore);
-            }
+
+            data.buildItemStack().setItemMeta(cachedMeta);
+
+            return baseItemStack();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return baseItemStack();
         }
-
-        data.buildItemStack().setItemMeta(cachedMeta);
-
-        return baseItemStack();
     }
 
     public ItemStack itemStack(@Nullable OfflinePlayer player) {

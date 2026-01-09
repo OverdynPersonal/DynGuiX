@@ -52,6 +52,14 @@ public class ItemMinecraft implements ItemData, Cloneable {
         this.internalStack = new ItemStack(material, amount);
     }
 
+    public ItemMinecraft(ItemStack itemStack) {
+        this.internalStack = itemStack;
+    }
+
+    public ItemMinecraft(Material material) {
+        this.internalStack = new ItemStack(material, 1);
+    }
+
     public ItemMinecraft(Material material, int amount) {
         this.internalStack = new ItemStack(material, amount);
         this.material = material;

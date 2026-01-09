@@ -10,7 +10,9 @@ import xyz.overdyn.dyngui.items.GuiItem;
 import xyz.overdyn.dyngui.items.ItemWrapper;
 import xyz.overdyn.dyngui.policy.GuiPolicy;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 
 /**
  * Abstract GUI layer with dynamic item support and optional auto-update.
@@ -72,7 +74,6 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
     public AbstractGuiLayer(int size, @NotNull Component title, GuiPolicy policy) {
         super(size, title, policy);
     }
-
 
     /**
      * Opens the GUI for a player.
@@ -148,7 +149,6 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
         return items;
     }
 
-
     /**
      * Registers a GUI item using hard replacement strategy.
      *
@@ -161,25 +161,27 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
      * @param item the {@link GuiItem} to register
      */
     public void registerItem(@NotNull GuiItem item) {
-        for (int slot : item.getSlots()) {
-            GuiItem existing = getItem(slot);
+        if (item.getSlots().isEmpty()) return;
+        var pendingSlots = new HashSet<>(item.getSlots());
+
+        for (int slot : pendingSlots) {
+            var existing = getItem(slot);
+
             if (existing != null) {
-                for (int s : existing.getSlots()) {
-                    getInventory().clear(s);
-                }
-                removeSlotHandlers(existing.getSlots());
-                items.remove(existing);
+                pendingSlots.removeAll(existing.getSlots());
+                unregisterItem(existing);
+            } else {
+                getInventory().clear(slot);
             }
-            getInventory().clear(slot);
         }
 
-        item.render(getViewer());
+        var itemStack = item.render(getViewer());
 
         setSlotHandlers(item.getSlots(), item::handleClick);
         items.add(item);
 
         for (int slot : item.getSlots()) {
-            getInventory().setItem(slot, item.baseItemStack());
+            getInventory().setItem(slot, itemStack);
         }
     }
 
@@ -201,29 +203,19 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
      */
 
     public void registerItemOverlay(@NotNull GuiItem item) {
+        if (item.getSlots().isEmpty()) return;
+
         for (int slot : item.getSlots()) {
-            GuiItem existing = getItem(slot);
-
-            if (existing != null) {
-                existing.getSlots().remove(slot);
-
-                getInventory().clear(slot);
-                removeSlotHandlers(Collections.singleton(slot));
-
-                if (existing.getSlots().isEmpty()) {
-                    removeSlotHandlers(existing.getSlots());
-                    items.remove(existing);
-                }
-            }
+            unregisterSlotOnly(slot);
         }
 
-        item.render(getViewer());
+        var itemStack = item.render(getViewer());
 
         setSlotHandlers(item.getSlots(), item::handleClick);
         items.add(item);
 
         for (int slot : item.getSlots()) {
-            getInventory().setItem(slot, item.baseItemStack());
+            getInventory().setItem(slot, itemStack);
         }
     }
 
@@ -242,9 +234,7 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
         if (item == null) return;
 
         item.getSlots().remove(slot);
-
         removeSlotHandler(slot);
-
         getInventory().clear(slot);
 
         if (item.getSlots().isEmpty()) {
@@ -273,7 +263,6 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
 
         items.clear();
     }
-
 
     /**
      * Unregisters the GUI item occupying a given slot.
@@ -319,11 +308,11 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
      * @param first  True if this is the first render (forces update even if item.isUpdate() is false)
      */
     private void updateAll(@NotNull HumanEntity player, boolean first) {
-        for (GuiItem item : items) {
+        for (var item : items) {
             if (!item.isUpdate() && !first) continue;
-            item.render((OfflinePlayer) player);
+            var itemStack = item.render((OfflinePlayer) player);
             for (int slot : item.getSlots()) {
-                getInventory().setItem(slot, item.baseItemStack());
+                getInventory().setItem(slot, itemStack);
             }
         }
     }
@@ -338,7 +327,12 @@ public abstract class AbstractGuiLayer extends AbstractGuiController {
         GuiItem item = getItem(slot);
         if (item == null) return;
         item.render(getViewer());
-        for (int s : item.getSlots()) getInventory().setItem(s, item.baseItemStack());
+        if (!item.getSlots().isEmpty()) {
+            var itemStack = item.baseItemStack();
+            for (int s : item.getSlots()) {
+                getInventory().setItem(s, itemStack);
+            }
+        }
     }
 
     /**
