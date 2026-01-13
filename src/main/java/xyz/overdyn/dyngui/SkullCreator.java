@@ -1,4 +1,4 @@
-package xyz.overdyn.dyngui.form;
+package xyz.overdyn.dyngui;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;

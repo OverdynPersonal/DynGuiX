@@ -1,6 +1,6 @@
-package xyz.overdyn.dyngui.form.v2;
+package xyz.overdyn.dyngui;
 
-import xyz.overdyn.dyngui.form.v2.cache.SkullCache;
+import xyz.overdyn.dyngui.cache.SkullCache;
 import xyz.overdyn.dyngui.items.ItemWrapper;
 
 import java.util.concurrent.CompletableFuture;
